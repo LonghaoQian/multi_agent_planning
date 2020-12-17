@@ -14,6 +14,8 @@ The a ros service server is added to provide the path: topic: "/get_plan"
 #include <iostream>
 #include <string>
 #include <functional>
+#include <vector>
+#include <algorithm> 
 // ros libs
 #include <ros/ros.h>
 #include <Eigen/Eigen>
@@ -28,10 +30,20 @@ enum TransitionDirection{
     TRANSITION_RIGHT,
 };
 
+enum VectorIndex{
+    Vector_X = 0,
+    Vector_Y,
+};
+
 struct nodeinfo {
     float NodeCost{0.0};
     Eigen::Vector4f TransitionCost;
     Eigen::Matrix<bool, 4, 1> Accessible;
+};
+
+struct agentmove {
+    int x{0};
+    int y{0};
 };
 
 // subscriber function for getting the agent position.
@@ -43,29 +55,69 @@ void GetAgentPosition(const multi_agent_planner::agentpos::ConstPtr& msg, int dr
 
 
 
-bool ResponseToGetplanCall(multi_agent_planner::pathinfo::Request& req, multi_agent_planner::pathinfo::Response& res, const Eigen::Matrix<nodeinfo,11,11>* grid){
+bool ResponseToGetplanCall(multi_agent_planner::pathinfo::Request& req, multi_agent_planner::pathinfo::Response& res, 
+                           const Eigen::Matrix<nodeinfo,11,11>* grid,
+                           Eigen::Matrix<agentmove, 22, Eigen::Dynamic>* path, 
+                           const Eigen::Matrix<int,Eigen::Dynamic, 2>* agentpos){
 
     // get the target position
+    std::cout<<" path requested for agent "<< req.agentID << "... \n";
+    std::cout<<" target position is X : " << req.x_target << " Y: " << req.y_target << "\n";
+    // calculate path.
 
-    // get the ID
-    //isperformAction = req.perform_action;
 
-
-
-    // calculate the index list
-   /* *if(DroneGeoFenceCheck()&&req.perform_action){
-        isperformAction = req.perform_action;
-    }else{
-        isperformAction = false;
-    }
-    res.status_ok = isperformAction;
-    res.trajectory_type = type;
-    return true;    
-    
+    /*
+    Since there is no obstacle in the grid and the cost is homegenous across the entire map, a heuristic method is used 
     */
+    int Xdiff = req.x_target - (*agentpos)(req.agentID,Vector_X);
+    int Ydiff = req.y_target - (*agentpos)(req.agentID,Vector_Y);
 
-    // for any remaining 
+    int Nx = abs(Xdiff);
+    int Ny = abs(Ydiff);
 
+    for(int i = 0;i<20;i++){
+        if(i<Nx){
+            if(Xdiff>0){// positve direction
+                res.x_indexlist[i] = (*agentpos)(req.agentID,Vector_X) + 1;
+            }
+            else{//negative direction
+                res.x_indexlist[i] = (*agentpos)(req.agentID,Vector_X) - 1; 
+            }
+        }else{// for the rest of the index, the 
+            res.x_indexlist[i] = 0;
+        }
+        (*path)(i,req.agentID).x = res.x_indexlist[i];
+        if(i<Ny){
+            if(Ydiff>0){// positve direction
+                res.y_indexlist[i] = (*agentpos)(req.agentID,Vector_Y) + 1;
+            }
+            else{//negative direction
+                res.y_indexlist[i] = (*agentpos)(req.agentID,Vector_Y) - 1; 
+            }
+        }else{
+            res.y_indexlist[i] = 0;
+        }
+        (*path)(i,req.agentID).y = res.y_indexlist[i];
+    }
+    /*------------ ------------------------- */
+
+    res.isListComplete = true; // this is always true because the maximum step for this planning problem is 20
+
+    // display path
+
+    int NumberOfSteps = std::max(Nx, Ny);
+
+    if(NumberOfSteps==0){
+        std::cout << " No movements required. \n";
+    }
+
+    for (int i = 0; i< NumberOfSteps ; i++){
+        std::cout << " (" << (*path)(i,req.agentID).x <<", " << (*path)(i,req.agentID).y <<") -> ";
+    }
+    
+    std::cout<<"Target \n";
+
+    std::cout<< "------------- response sent! ...  -------------\n";
     return true;  
 
 }
@@ -100,6 +152,8 @@ bool ResponseToGetplanCall(multi_agent_planner::pathinfo::Request& req, multi_ag
     std::cout<< "------------------End of Payload Info ------------------ \n";
 }*/
 
+
+
 int main(int argc, char **argv){
 
     ros::init(argc, argv, "planner");
@@ -108,25 +162,107 @@ int main(int argc, char **argv){
     namespace arg = std::placeholders;
     // define the grid
     Eigen::Matrix<nodeinfo,11,11> Grid;
+    // initailize the corners of the grid:
 
-    // initialize the grid
-    //for ()
+    Grid(0,0).NodeCost = 0.0;
+    Grid(0,0).TransitionCost.setZero();
+    Grid(0,0).TransitionCost(TRANSITION_UP) = 1000.0;
+    Grid(0,0).TransitionCost(TRANSITION_DOWN) = 10.0;
+    Grid(0,0).TransitionCost(TRANSITION_LEFT) = 1000.0;
+    Grid(0,0).TransitionCost(TRANSITION_RIGHT) = 10.0; 
 
+    Grid(0,10).NodeCost = 0.0;
+    Grid(0,10).TransitionCost.setZero();
+    Grid(0,10).TransitionCost(TRANSITION_UP) = 1000.0;
+    Grid(0,10).TransitionCost(TRANSITION_DOWN) = 10.0;
+    Grid(0,10).TransitionCost(TRANSITION_LEFT) = 10.0;
+    Grid(0,10).TransitionCost(TRANSITION_RIGHT) = 1000.0; 
+
+
+    Grid(10,0).NodeCost = 0.0;
+    Grid(10,0).TransitionCost.setZero();
+    Grid(10,0).TransitionCost(TRANSITION_UP) = 10.0;
+    Grid(10,0).TransitionCost(TRANSITION_DOWN) = 1000.0;
+    Grid(10,0).TransitionCost(TRANSITION_LEFT) = 1000.0;
+    Grid(10,0).TransitionCost(TRANSITION_RIGHT) = 10.0; 
+
+    Grid(10,10).NodeCost = 0.0;
+    Grid(10,10).TransitionCost.setZero();
+    Grid(10,10).TransitionCost(TRANSITION_UP) = 10.0;
+    Grid(10,10).TransitionCost(TRANSITION_DOWN) = 1000.0;
+    Grid(10,10).TransitionCost(TRANSITION_LEFT) = 10.0;
+    Grid(10,10).TransitionCost(TRANSITION_RIGHT) = 1000.0; 
+
+    // initialize the boundary of the grid:
+
+
+    for (int i = 1; i < 10; i++){
+        Grid(0,i).NodeCost = 0.0;
+        Grid(0,i).TransitionCost.setZero();
+        Grid(0,i).TransitionCost(TRANSITION_UP) = 1000.0;
+        Grid(0,i).TransitionCost(TRANSITION_DOWN) = 10.0;
+        Grid(0,i).TransitionCost(TRANSITION_LEFT) = 10.0;
+        Grid(0,i).TransitionCost(TRANSITION_RIGHT) = 10.0;
+
+        Grid(i,0).NodeCost = 0.0;
+        Grid(i,0).TransitionCost.setZero();
+        Grid(i,0).TransitionCost(TRANSITION_UP) = 10.0;
+        Grid(i,0).TransitionCost(TRANSITION_DOWN) = 10.0;
+        Grid(i,0).TransitionCost(TRANSITION_LEFT) = 1000.0;
+        Grid(i,0).TransitionCost(TRANSITION_RIGHT) = 10.0;
+
+
+        Grid(10,i).NodeCost = 0.0;
+        Grid(10,i).TransitionCost.setZero();
+        Grid(10,i).TransitionCost(TRANSITION_UP) = 10.0;
+        Grid(10,i).TransitionCost(TRANSITION_DOWN) = 1000.0;
+        Grid(10,i).TransitionCost(TRANSITION_LEFT) = 10.0;
+        Grid(10,i).TransitionCost(TRANSITION_RIGHT) = 10.0;
+
+        Grid(i,10).NodeCost = 0.0;
+        Grid(i,10).TransitionCost.setZero();
+        Grid(i,10).TransitionCost(TRANSITION_UP) = 10.0;
+        Grid(i,10).TransitionCost(TRANSITION_DOWN) = 10.0;
+        Grid(i,10).TransitionCost(TRANSITION_LEFT) = 10.0;
+        Grid(i,10).TransitionCost(TRANSITION_RIGHT) = 1000.0;
+
+
+        for(int j = 1; j < 10 ; j++){
+            Grid(i,j).NodeCost = 0.0;
+            Grid(i,j).TransitionCost.setZero();
+            Grid(i,j).TransitionCost(TRANSITION_UP)    = 10.0;
+            Grid(i,j).TransitionCost(TRANSITION_DOWN)  = 10.0;
+            Grid(i,j).TransitionCost(TRANSITION_LEFT)  = 10.0;
+            Grid(i,j).TransitionCost(TRANSITION_RIGHT) = 10.0;
+        }
+
+    }
 
     // get the number of agents
     int NumberOfAgents = 0;
     nh.param<int>("NumberofAgents", NumberOfAgents, 0);
     // initialize the storage for agent positions
     Eigen::Matrix<int,Eigen::Dynamic, 2> AgentPosition;
+    Eigen::Matrix<agentmove, 22, Eigen::Dynamic> AgentPath;
     AgentPosition.resize(NumberOfAgents,2);
+    AgentPath.resize(20, NumberOfAgents);
     // initialize the position 
     AgentPosition.setZero();
     // get the address of the agent position
     Eigen::Matrix<int,Eigen::Dynamic, 2>* PosPtr = & AgentPosition; 
     // 
-    ros::ServiceServer serverAction =  
+    ros::ServiceServer PlannerAction =  
     nh.advertiseService<multi_agent_planner::pathinfo::Request, multi_agent_planner::pathinfo::Response>("/get_plan",                                                     
-        std::bind(&ResponseToGetplanCall, arg::_1, arg::_2,&Grid));// bind the function to the server
+        std::bind(&ResponseToGetplanCall, arg::_1, arg::_2,&Grid,&AgentPath,&AgentPosition));// bind the function to the server
+    std::vector<std::unique_ptr<ros::Subscriber>> SubAgentList;
+
+    for (int i = 0; i< NumberOfAgents; i++){
+        SubAgentList.emplace_back(new ros::Subscriber);
+        std::string agentID = std::to_string(i);
+        (*SubAgentList[i]) = nh.subscribe<multi_agent_planner::agentpos>("/agent" + agentID + "/agent_feedback", 100, 
+                                                                         std::bind(&GetAgentPosition, arg::_1, i, &AgentPosition));
+    }
+    // before the loop display the parameters:
 
     while(ros::ok()) {
         // display results

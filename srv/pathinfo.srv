@@ -1,7 +1,7 @@
 int32 agentID
-float32 x_target
-float32 y_target
+int32 x_target
+int32 y_target
 ---
-int32[21] x_indexlist
-int32[21] y_indexlist
+int32[20] x_indexlist
+int32[20] y_indexlist
 bool isListComplete

@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<launch>
+	<node pkg="multi_agent_planner" type="planner" name="planner" output="screen">
+	    <rosparam command="load" file="$(find multi_agent_planner)/config/plannersetting.yaml" />
+	</node>
+</launch>
