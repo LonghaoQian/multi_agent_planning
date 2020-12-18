@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<launch>
+<arg name="agentID" default="agent0"/>
+   <group ns="$(arg agentID)" >
+	<node pkg="multi_agent_planner" type="agent" name="agent" output="screen" args="$(eval arg('agentID')[-1:])">
+	</node>
+   </group>
+</launch>

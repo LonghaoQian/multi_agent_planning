@@ -13,6 +13,7 @@ find_package(catkin REQUIRED COMPONENTS
   rospy
   std_msgs
   tf2_eigen
+  visualization_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -59,6 +60,7 @@ add_message_files(
 add_service_files(
   FILES
   pathinfo.srv
+  agentgoal.srv
 )
 
 ## Generate actions in the 'action' folder

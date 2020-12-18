@@ -53,11 +53,65 @@ void GetAgentPosition(const multi_agent_planner::agentpos::ConstPtr& msg, int dr
    (*PosPtr)(drone_ID,1) =  msg->pos_y;
 }
 
+void HeuristicPlanning (int agentID,
+                        int x_target, 
+                        int y_target, 
+                        int x_pos,
+                        int y_pos,
+                        Eigen::Matrix<agentmove, 20, Eigen::Dynamic>* path,
+                        const Eigen::Matrix<nodeinfo,11,11>* grid){
+
+    /*
+    Since there is no obstacle in the grid and the cost is homegenous across the entire map, a heuristic method is used 
+    */
+    int Xdiff = x_target - x_pos;
+    int Ydiff = y_target - y_pos;
+
+    int Nx = abs(Xdiff);
+    int Ny = abs(Ydiff);
+
+    int step_x = x_pos;
+    int step_y = x_pos;
+
+    for(int i = 0;i<20;i++){
+        if(i<Nx){
+            if(Xdiff>0){// positve direction
+                step_x += 1;
+            }
+            else{//negative direction
+                step_x += - 1; 
+            }
+        }else if(Nx<=i<Ny+Nx){
+            if(Ydiff>0){// positve direction
+                step_y += 1;
+            }
+            else{//negative direction
+                step_y += -1; 
+            }
+        }
+        (*path)(i,agentID).x = step_x;
+        (*path)(i,agentID).y = step_y;
+    }
+
+    int NumberOfSteps  = Nx +Ny;
+
+    if(NumberOfSteps==0){
+        std::cout << " No movements required. \n";
+    }
+
+    for (int i = 0; i< NumberOfSteps ; i++){
+        std::cout << " (" << (*path)(i,agentID).x <<", " << (*path)(i,agentID).y <<") -> ";
+    }
+    
+    std::cout<<"Target \n";
+
+    /*------------ ------------------------- */
+}
 
 
 bool ResponseToGetplanCall(multi_agent_planner::pathinfo::Request& req, multi_agent_planner::pathinfo::Response& res, 
                            const Eigen::Matrix<nodeinfo,11,11>* grid,
-                           Eigen::Matrix<agentmove, 22, Eigen::Dynamic>* path, 
+                           Eigen::Matrix<agentmove, 20, Eigen::Dynamic>* path, 
                            const Eigen::Matrix<int,Eigen::Dynamic, 2>* agentpos){
 
     // get the target position
@@ -65,59 +119,9 @@ bool ResponseToGetplanCall(multi_agent_planner::pathinfo::Request& req, multi_ag
     std::cout<<" target position is X : " << req.x_target << " Y: " << req.y_target << "\n";
     // calculate path.
 
+    HeuristicPlanning (req.agentID, req.x_target,  req.y_target, (*agentpos)(req.agentID, Vector_X),(*agentpos)(req.agentID,Vector_Y), path, grid);
 
-    /*
-    Since there is no obstacle in the grid and the cost is homegenous across the entire map, a heuristic method is used 
-    */
-    int Xdiff = req.x_target - (*agentpos)(req.agentID,Vector_X);
-    int Ydiff = req.y_target - (*agentpos)(req.agentID,Vector_Y);
-
-    int Nx = abs(Xdiff);
-    int Ny = abs(Ydiff);
-
-    for(int i = 0;i<20;i++){
-        if(i<Nx){
-            if(Xdiff>0){// positve direction
-                res.x_indexlist[i] = (*agentpos)(req.agentID,Vector_X) + 1;
-            }
-            else{//negative direction
-                res.x_indexlist[i] = (*agentpos)(req.agentID,Vector_X) - 1; 
-            }
-        }else{// for the rest of the index, the 
-            res.x_indexlist[i] = 0;
-        }
-        (*path)(i,req.agentID).x = res.x_indexlist[i];
-        if(i<Ny){
-            if(Ydiff>0){// positve direction
-                res.y_indexlist[i] = (*agentpos)(req.agentID,Vector_Y) + 1;
-            }
-            else{//negative direction
-                res.y_indexlist[i] = (*agentpos)(req.agentID,Vector_Y) - 1; 
-            }
-        }else{
-            res.y_indexlist[i] = 0;
-        }
-        (*path)(i,req.agentID).y = res.y_indexlist[i];
-    }
-    /*------------ ------------------------- */
-
-    res.isListComplete = true; // this is always true because the maximum step for this planning problem is 20
-
-    // display path
-
-    int NumberOfSteps = std::max(Nx, Ny);
-
-    if(NumberOfSteps==0){
-        std::cout << " No movements required. \n";
-    }
-
-    for (int i = 0; i< NumberOfSteps ; i++){
-        std::cout << " (" << (*path)(i,req.agentID).x <<", " << (*path)(i,req.agentID).y <<") -> ";
-    }
-    
-    std::cout<<"Target \n";
-
-    std::cout<< "------------- response sent! ...  -------------\n";
+    ROS_INFO("Response Sent !");
     return true;  
 
 }
@@ -243,7 +247,7 @@ int main(int argc, char **argv){
     nh.param<int>("NumberofAgents", NumberOfAgents, 0);
     // initialize the storage for agent positions
     Eigen::Matrix<int,Eigen::Dynamic, 2> AgentPosition;
-    Eigen::Matrix<agentmove, 22, Eigen::Dynamic> AgentPath;
+    Eigen::Matrix<agentmove, 20, Eigen::Dynamic> AgentPath;
     AgentPosition.resize(NumberOfAgents,2);
     AgentPath.resize(20, NumberOfAgents);
     // initialize the position 
@@ -259,10 +263,17 @@ int main(int argc, char **argv){
     for (int i = 0; i< NumberOfAgents; i++){
         SubAgentList.emplace_back(new ros::Subscriber);
         std::string agentID = std::to_string(i);
-        (*SubAgentList[i]) = nh.subscribe<multi_agent_planner::agentpos>("/agent" + agentID + "/agent_feedback", 100, 
+        (*SubAgentList[i]) = nh.subscribe<multi_agent_planner::agentpos>("/agent" + agentID + "/agent_feedback", 50, 
                                                                          std::bind(&GetAgentPosition, arg::_1, i, &AgentPosition));
     }
     // before the loop display the parameters:
+
+
+    // test the heuristic algorithm
+
+
+    HeuristicPlanning (0,1, 2, 7, 8, &AgentPath,&Grid);
+
 
     while(ros::ok()) {
         // display results

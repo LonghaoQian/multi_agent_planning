@@ -2,6 +2,7 @@ int32 agentID
 int32 x_target
 int32 y_target
 ---
+int32 NumSteps
 int32[20] x_indexlist
 int32[20] y_indexlist
 bool isListComplete

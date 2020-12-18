@@ -1,0 +1,5 @@
+int32 x_target
+int32 y_target
+float32 theta
+---
+bool isPlanRecieved
