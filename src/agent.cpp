@@ -123,16 +123,41 @@ bool ResponseToGetplanCall(multi_agent_planner::agentgoal::Request& req,
                            int agentID,
                            const multi_agent_planner::agentpos* posPtr,
                            ros::ServiceClient* PlanClientPtr,
-                           multi_agent_planner::pathinfo* RequestedPlan){
+                           multi_agent_planner::pathinfo* RequestedPlan,
+                           bool* isUpdateGraphics,
+                           visualization_msgs::Marker* pointsPtr,
+                           visualization_msgs::Marker* linestripPtr){
     // get the goal location from the 
-    RequestedPlan->x_target = req.x_target;
-    RequestedPlan->y_target = req.y_target;
+    RequestedPlan->request.x_target = req.x_target;
+    RequestedPlan->request.y_target = req.y_target;
+    RequestedPlan->request.agentID  = agentID;
+    res.isPlanRecieved = PlanClientPtr->call(*RequestedPlan);
+
+    if( res.isPlanRecieved) {// if service recieved, update the graphics
+        *isUpdateGraphics = true;
+        geometry_msgs::Point p;
+        linestripPtr->points.clear();// clear the line buffer
+        for (int i = 0; i < RequestedPlan->response.NumSteps; i++){
+            p.x = (float)RequestedPlan->response.x_indexlist[i]-5.0;
+            p.y = (float)RequestedPlan->response.y_indexlist[i]-5.0;
+            p.z = 0.0;
+            linestripPtr->points.push_back(p);        
+        }
+        ROS_INFO("Plan recieved, showing results:");
+        if(RequestedPlan->response.NumSteps == 0){
+            std::cout << " No movements required. \n";
+        }
+
+        for (int i = 0; i< RequestedPlan->response.NumSteps ; i++){
+            std::cout << " (" << RequestedPlan->response.x_indexlist[i] <<", " << RequestedPlan->response.y_indexlist[i] <<") -> ";
+        }
+    
+        std::cout<<"Target \n";
 
 
-                       
-    bool isresponserecieved = PlanClientPtr->call(*RequestedPlan);
-
-
+    }else{
+        ROS_WARN("No reponse from the planner server...");
+    }
 
     return true;
 }
@@ -147,6 +172,9 @@ int main(int argc, char **argv){
     // the position of the agent
     multi_agent_planner::agentpos Position;
     multi_agent_planner::pathinfo RequestedPlan;
+    bool isUpdateGraphics = false;
+
+    visualization_msgs::Marker points, line_strip;
     // define the topics
     std::string TopicFeedback = "/agent";
     std::string TopicUpdateGoal = "/agent";
@@ -183,7 +211,10 @@ int main(int argc, char **argv){
         std::bind(&ResponseToGetplanCall, arg::_1, arg::_2, 
         agentIDi, 
         &Position,&ClientCallPlanner,
-        &RequestedPlan));// bind the function to the server
+        &RequestedPlan,
+        &isUpdateGraphics,
+        &points,
+        &line_strip));// bind the function to the server
 
     ros::Publisher marker_pub = nh.advertise<visualization_msgs::Marker>("/visualization_marker", 10);
 
@@ -192,24 +223,16 @@ int main(int argc, char **argv){
     nh.param<int>("AgentPos_x", Position.pos_x, 0);
     nh.param<int>("AgentPos_y", Position.pos_y, 0);
 
-    RequestedPlan.response.NumSteps = 3;
-    RequestedPlan.response.x_indexlist[0] = 0;
-    RequestedPlan.response.x_indexlist[1] = 1;
-    RequestedPlan.response.x_indexlist[2] = 1;
+    std::cout<< "The initial position for agent "<< agentIDi << " is: x = " <<Position.pos_x << ", y = " << Position.pos_y << "\n";
 
-    RequestedPlan.response.y_indexlist[0] = 0;
-    RequestedPlan.response.y_indexlist[1] = 0;
-    RequestedPlan.response.y_indexlist[2] = 1;
-
-    visualization_msgs::Marker points, line_strip;
-
+    // initialize the graphics information
     points.header.frame_id = line_strip.header.frame_id  = "/grid_frame";
     points.ns = line_strip.ns = "points_and_lines";
   
     points.pose.orientation.w = line_strip.pose.orientation.w = 1.0;
 
-    points.id = 0; //agentID*2;
-    line_strip.id = 1; //agentID*2+1;
+    points.id = agentIDi*2;
+    line_strip.id = agentIDi*2+1;
 
     points.type = visualization_msgs::Marker::POINTS;
     line_strip.type = visualization_msgs::Marker::LINE_STRIP;
@@ -260,18 +283,12 @@ int main(int argc, char **argv){
     int SendDeleteCounter = 0;
     int SendDrawCounter = 0;
 
-    bool isUpdateGraphics = true;
-
-    for (int i = 0; i < RequestedPlan.response.NumSteps; i++){
-        p.x = (float)RequestedPlan.response.x_indexlist[i]-5.0;
-        p.y = (float)RequestedPlan.response.y_indexlist[i]-5.0;
-        p.z = 0.0;
-        line_strip.points.push_back(p);        
-    }
-
     while(ros::ok()) {
         // display results
         ros::spinOnce();
+        // publish the agent location:
+        PubAgentPos.publish(Position);
+        // update the graphics
         if (isUpdateGraphics) {
             if (SendDeleteCounter<10){
                 points.header.stamp = line_strip.header.stamp  = ros::Time::now();
@@ -290,8 +307,10 @@ int main(int argc, char **argv){
                 }else{
                     isUpdateGraphics = false;
                 }
-
             }       
+        }else{ // if update in off, reset the counter
+            SendDeleteCounter = 0;
+            SendDrawCounter   = 0;
         }
 
         rate.sleep();

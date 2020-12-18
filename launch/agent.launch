@@ -3,6 +3,7 @@
 <arg name="agentID" default="agent0"/>
    <group ns="$(arg agentID)" >
 	<node pkg="multi_agent_planner" type="agent" name="agent" output="screen" args="$(eval arg('agentID')[-1:])">
+        <rosparam command="load" file="$(find multi_agent_planner)/config/$(arg agentID)para.yaml" />
 	</node>
    </group>
 </launch>

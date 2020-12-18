@@ -48,12 +48,13 @@ struct agentmove {
 
 // subscriber function for getting the agent position.
 
-void GetAgentPosition(const multi_agent_planner::agentpos::ConstPtr& msg, int drone_ID, Eigen::Matrix<int,Eigen::Dynamic, 2>* PosPtr){
-   (*PosPtr)(drone_ID,0) =  msg->pos_x;
-   (*PosPtr)(drone_ID,1) =  msg->pos_y;
+void GetAgentPosition(const multi_agent_planner::agentpos::ConstPtr& msg, int ID, Eigen::Matrix<int,Eigen::Dynamic, 2>* PosPtr){
+   (*PosPtr)(ID,0) =  msg->pos_x;
+   (*PosPtr)(ID,1) =  msg->pos_y;
+   //std::cout<< " feedback recived from " << ID << "positions are X: " << (*PosPtr)(ID,0)  << " Y: " << (*PosPtr)(ID,1) << "\n";
 }
 
-void HeuristicPlanning (int agentID,
+int HeuristicPlanning (int agentID,
                         int x_target, 
                         int y_target, 
                         int x_pos,
@@ -71,7 +72,7 @@ void HeuristicPlanning (int agentID,
     int Ny = abs(Ydiff);
 
     int step_x = x_pos;
-    int step_y = x_pos;
+    int step_y = y_pos;
 
     for(int i = 0;i<20;i++){
         if(i<Nx){
@@ -105,6 +106,8 @@ void HeuristicPlanning (int agentID,
     
     std::cout<<"Target \n";
 
+    return NumberOfSteps;
+
     /*------------ ------------------------- */
 }
 
@@ -116,10 +119,16 @@ bool ResponseToGetplanCall(multi_agent_planner::pathinfo::Request& req, multi_ag
 
     // get the target position
     std::cout<<" path requested for agent "<< req.agentID << "... \n";
-    std::cout<<" target position is X : " << req.x_target << " Y: " << req.y_target << "\n";
+    std::cout << "the initial position is X: " << (*agentpos)(req.agentID, Vector_X) << " Y: " << (*agentpos)(req.agentID,Vector_Y) << "\n";
+    std::cout<<"the target position is X : " << req.x_target << " Y: " << req.y_target << "\n";
     // calculate path.
 
-    HeuristicPlanning (req.agentID, req.x_target,  req.y_target, (*agentpos)(req.agentID, Vector_X),(*agentpos)(req.agentID,Vector_Y), path, grid);
+    res.NumSteps = HeuristicPlanning (req.agentID, req.x_target,  req.y_target, (*agentpos)(req.agentID, Vector_X),(*agentpos)(req.agentID,Vector_Y), path, grid);
+    for(int i = 0; i< res.NumSteps; i++){
+       res.x_indexlist[i] =  (*path)(i,req.agentID).x;
+       res.y_indexlist[i] =  (*path)(i,req.agentID).y;
+    }
+    res.isListComplete = true;
 
     ROS_INFO("Response Sent !");
     return true;  
@@ -272,7 +281,7 @@ int main(int argc, char **argv){
     // test the heuristic algorithm
 
 
-    HeuristicPlanning (0,1, 2, 7, 8, &AgentPath,&Grid);
+    //HeuristicPlanning (0,1, 2, 7, 8, &AgentPath,&Grid);
 
 
     while(ros::ok()) {
