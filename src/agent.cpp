@@ -24,99 +24,6 @@ An agent node that requires
 #include <multi_agent_planner/agentgoal.h>
 #include <multi_agent_planner/pathinfo.h>
 
-void DisplayAgentPosition(){
-
-}
-
-void UpdatePlannedPath(const multi_agent_planner::pathinfo& plan,
-                       ros::Publisher* graphics_pub,
-                       int agentID){
-
-    visualization_msgs::Marker points, line_strip;
-
-    points.header.frame_id = line_strip.header.frame_id  = "/grid_frame";
-    points.ns = line_strip.ns = "points_and_lines";
-  
-    points.pose.orientation.w = line_strip.pose.orientation.w = 1.0;
-
-    points.id = 0; //agentID*2;
-    line_strip.id = 1; //agentID*2+1;
-
-    points.type = visualization_msgs::Marker::POINTS;
-    line_strip.type = visualization_msgs::Marker::LINE_STRIP;
-
-    // LINE_STRIP/LINE_LIST markers use only the x component of scale, for the line width
-    line_strip.scale.x = 0.1;
-
-    // assign line color based on the agent ID
-    switch (agentID){
-        case 0: {
-            // Points are green
-            points.color.g = 1.0f;
-            points.color.a = 1.0;
-
-            // Line strip is red
-            line_strip.color.r = 1.0;
-            line_strip.color.a = 1.0;            
-            break;
-        }
-        case 1: {
-
-            points.color.g = 0.5f;
-            points.color.r = 0.5f;
-            points.color.a = 1.0;
-
-            line_strip.color.g = 0.5f;
-            line_strip.color.b = 0.5f;
-            line_strip.color.a = 1.0;                 
-            break;
-        }
-        default: {
-            // Points are green
-            points.color.g = 1.0f;
-            points.color.a = 1.0;
-
-            // Line strip is red
-            line_strip.color.r = 1.0;
-            line_strip.color.a = 1.0;      
-            break;
-        }
-    }
-
-    // POINTS markers use x and y scale for width/height respectively
-    points.scale.x = 0.2;
-    points.scale.y = 0.2;
-
-    int SendDeleteCounter = 10;
-    int SendDrawCounter = 10;
-    // delete the prvious lines first
-    for (int i = 0; i< SendDeleteCounter ; i++){
-
-        
-        points.header.stamp = line_strip.header.stamp  = ros::Time::now();
-        points.action = line_strip.action  = visualization_msgs::Marker::DELETE;
-        graphics_pub->publish(points);
-        graphics_pub->publish(line_strip);    
-
-    }
-    // load path information
-    geometry_msgs::Point p;    
-    for (int i = 0; i < plan.response.NumSteps; i++){
-        p.x = (float)plan.response.x_indexlist[i]-5.0;
-        p.y = (float)plan.response.y_indexlist[i]-5.0;
-        p.z = 0.0;
-        line_strip.points.push_back(p);        
-    }
-    points.header.stamp = line_strip.header.stamp  = ros::Time::now();
-    points.action = line_strip.action = visualization_msgs::Marker::ADD; // set the flag back to ADD 
-
-    for (int i = 0; i< SendDrawCounter ; i++){
-            graphics_pub->publish(points);
-            graphics_pub->publish(line_strip);
-            ROS_INFO("points published...");
-    }
-}
-
 
 bool ResponseToGetplanCall(multi_agent_planner::agentgoal::Request& req,
                            multi_agent_planner::agentgoal::Response& res,
@@ -137,6 +44,10 @@ bool ResponseToGetplanCall(multi_agent_planner::agentgoal::Request& req,
         *isUpdateGraphics = true;
         geometry_msgs::Point p;
         linestripPtr->points.clear();// clear the line buffer
+        p.x = (float) posPtr->pos_x -5.0;
+        p.y = (float) posPtr->pos_y -5.0;
+        p.z = 0.0;
+        linestripPtr->points.push_back(p);         
         for (int i = 0; i < RequestedPlan->response.NumSteps; i++){
             p.x = (float)RequestedPlan->response.x_indexlist[i]-5.0;
             p.y = (float)RequestedPlan->response.y_indexlist[i]-5.0;
@@ -184,7 +95,7 @@ int main(int argc, char **argv){
     int agentIDi = 0;
     char agentDefaultID = '0';
     if ( argc > 1) {    // if ID is specified as the second argument 
-        ROS_INFO("Agent ID specified as: UAV%s", argv[1]);
+        ROS_INFO("Agent ID specified as: agent%s", argv[1]);
         agentID = argv[1];
     } else {
         agentID = &agentDefaultID;
@@ -315,6 +226,5 @@ int main(int argc, char **argv){
 
         rate.sleep();
     }
-
     return 0;
 }

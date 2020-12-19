@@ -48,10 +48,10 @@ struct agentmove {
 
 // subscriber function for getting the agent position.
 
-void GetAgentPosition(const multi_agent_planner::agentpos::ConstPtr& msg, int ID, Eigen::Matrix<int,Eigen::Dynamic, 2>* PosPtr){
+void GetAgentPosition(const multi_agent_planner::agentpos::ConstPtr& msg, 
+                      int ID, Eigen::Matrix<int,Eigen::Dynamic, 2>* PosPtr){
    (*PosPtr)(ID,0) =  msg->pos_x;
    (*PosPtr)(ID,1) =  msg->pos_y;
-   //std::cout<< " feedback recived from " << ID << "positions are X: " << (*PosPtr)(ID,0)  << " Y: " << (*PosPtr)(ID,1) << "\n";
 }
 
 int HeuristicPlanning (int agentID,
@@ -94,9 +94,9 @@ int HeuristicPlanning (int agentID,
         (*path)(i,agentID).y = step_y;
     }
 
-    int NumberOfSteps  = Nx +Ny;
+    int NumberOfSteps  = Nx + Ny;
 
-    if(NumberOfSteps==0){
+    if(NumberOfSteps== 0 ){
         std::cout << " No movements required. \n";
     }
 
@@ -118,11 +118,10 @@ bool ResponseToGetplanCall(multi_agent_planner::pathinfo::Request& req, multi_ag
                            const Eigen::Matrix<int,Eigen::Dynamic, 2>* agentpos){
 
     // get the target position
-    std::cout<<" path requested for agent "<< req.agentID << "... \n";
-    std::cout << "the initial position is X: " << (*agentpos)(req.agentID, Vector_X) << " Y: " << (*agentpos)(req.agentID,Vector_Y) << "\n";
-    std::cout<<"the target position is X : " << req.x_target << " Y: " << req.y_target << "\n";
-    // calculate path.
-
+    ROS_INFO(" Recieved path request for agent: %d", req.agentID);
+    std::cout <<"The initial position is X: " << (*agentpos)(req.agentID, Vector_X) << " Y: " << (*agentpos)(req.agentID,Vector_Y) << "\n";
+    std::cout <<"The target  position is X : " << req.x_target << " Y: " << req.y_target << "\n";
+    // calculate path. (Here since the map is homegenous, heuristic planning method is used. For more complicated scenarios, methods such as A star can be used.)
     res.NumSteps = HeuristicPlanning (req.agentID, req.x_target,  req.y_target, (*agentpos)(req.agentID, Vector_X),(*agentpos)(req.agentID,Vector_Y), path, grid);
     for(int i = 0; i< res.NumSteps; i++){
        res.x_indexlist[i] =  (*path)(i,req.agentID).x;
@@ -130,42 +129,10 @@ bool ResponseToGetplanCall(multi_agent_planner::pathinfo::Request& req, multi_ag
     }
     res.isListComplete = true;
 
-    ROS_INFO("Response Sent !");
+    ROS_INFO("Response sent to agent%d", req.agentID);
     return true;  
 
 }
-
- /*void DisplayResults(const Eigen::Vector3f& payloadposition, 
-                          const Eigen::Vector3f& payloadvelocity, 
-                          const Eigen::Vector3f& payloadpositionbody,
-                          const Eigen::Vector3f& payloadvelocitybody,
-                          const float& sampletime){
-
-    //固定的浮点显示
-    cout.setf(ios::fixed);
-    //左对齐
-    cout.setf(ios::left);
-    // 强制显示小数点
-    cout.setf(ios::showpoint);
-    // 强制显示符号
-    cout.setf(ios::showpos);
-    cout<<setprecision(2);// number of decimals 
-   
-    std::cout<< "----------------------- Payload Info ------------------ \n";
-    std::cout<< "Payload inertial position X: " << payloadposition(math_utils::Vector_X) << " (m), Y: " << payloadposition(math_utils::Vector_Y)
-    <<" (m), Z: "<< payloadposition(math_utils::Vector_Z) << " (m). \n";
-     std::cout<< "Payload inertial velocity X: " << payloadvelocity(math_utils::Vector_X) * 100.0 << " (cm/s), Y: " << payloadvelocity(math_utils::Vector_Y)* 100.0
-    <<" (cm/s), Z: "<< payloadvelocity(math_utils::Vector_Z)* 100.0 << " (cm/s). \n";   
-    std::cout<< "The sample time is: " << sampletime << " (s) \n";
-    std::cout<< "Payload body position X: " << payloadpositionbody(math_utils::Vector_X) << " (m), Y: " << payloadpositionbody(math_utils::Vector_Y)
-    <<" (m), Z: "<< payloadpositionbody(math_utils::Vector_Z) << " (m). \n";
-     std::cout<< "Payload body velocity X: " << payloadvelocitybody(math_utils::Vector_X)* 100.0<< " (cm/s), Y: " << payloadvelocitybody(math_utils::Vector_Y)* 100.0
-    <<" (cm/s), Z: "<< payloadvelocitybody(math_utils::Vector_Z)* 100.0 << " (cm/s). \n";   
-    std::cout<< "The sample time is: " << sampletime << " (s) \n";
-    std::cout<< "------------------End of Payload Info ------------------ \n";
-}*/
-
-
 
 int main(int argc, char **argv){
 
@@ -275,17 +242,8 @@ int main(int argc, char **argv){
         (*SubAgentList[i]) = nh.subscribe<multi_agent_planner::agentpos>("/agent" + agentID + "/agent_feedback", 50, 
                                                                          std::bind(&GetAgentPosition, arg::_1, i, &AgentPosition));
     }
-    // before the loop display the parameters:
-
-
-    // test the heuristic algorithm
-
-
-    //HeuristicPlanning (0,1, 2, 7, 8, &AgentPath,&Grid);
-
 
     while(ros::ok()) {
-        // display results
         ros::spinOnce();
         rate.sleep();
     }
