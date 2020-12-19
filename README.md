@@ -26,15 +26,19 @@ The launch files of this package is listed in the following table:
 |`'multi_planner.launch'` | To launch the planner node           |
 |`'agent.launch'`          |To launch the agent node          |
 
-- Start the planner
+- Start the planner (new terminal)
 
-> $ roslaunch multi_agent_planning multi_planner.launch
+> $ roslaunch multi_agent_planner multi_planner.launch 
 
-- Start agent 0 and 1 (The agent 0 and 1 correspond to " agent_1 " and "agent_2" in the project description, respectively )
+- Start agent 0 and 1 (The agent 0 and 1 correspond to " agent_1 " and "agent_2" in the project description, respectively ) (2 new terminals)
 
-> $ roslaunch multi_agent_planning agent.launch "agentID:=agent0"
+> $ roslaunch multi_agent_planner agent.launch "agentID:=agent0"
 
-> $ roslaunch multi_agent_planning agent.launch "agentID:=agent1"
+> $ roslaunch multi_agent_planner agent.launch "agentID:=agent1"
+
+- Start the rviz (new terminal)
+
+> $ rosrun rviz rviz
 
 Two rosnodes are created with the corresponding agent IDs. 
 
