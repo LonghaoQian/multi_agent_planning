@@ -5,8 +5,7 @@ The agent node
 Author: Longhao Qian 
 Data Dec 16 2020
 ----------------------------------
-An agent node that requires 
-
+An agent node that askes for the grid plan
 
 ----------------------------------
 */
