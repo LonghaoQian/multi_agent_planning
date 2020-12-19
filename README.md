@@ -2,12 +2,13 @@
 
 [![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://GitHub.com/Naereen/StrapDown.js/graphs/commit-activity) 
 
-This is the ros package to implement multi-agent planning function. The agent node simulates the agent logic by requesting the path via the rosservice from the planner node. The planner node processes the service call and sents out the path to the corresponding agent. 
+This is the ros package to implement the multi-agent planning function. The agent node simulates the agent logic by requesting the path via the rosservice from the planner node. The planner node processes the service call and sends out the path to the corresponding agent. 
 
 <img src="images/rvizplot.png">
+
 ## Download and compile:
 
-- The same as the download and compiling process of a regular ros package.
+- The same as the downloading and compiling process of a regular ros package.
 
 > $ cd catkin_ws/src
 
@@ -19,7 +20,7 @@ This is the ros package to implement multi-agent planning function. The agent no
 
 ## How to run the ros nodes:
 
-The launch files of this package is listed in the following table:
+The launch files of this package are listed in the following table:
 
 |        Name    | Function                       |
 |----------------|-------------------------------|
@@ -52,7 +53,7 @@ In order to distinguish the service topics, a prefix is added to "/update_goal" 
 
 - Settings for rviz
 
-> `'Fixed Frame'` is set to "grid_frame"
+> `'Fixed Frame'` is set to "/grid_frame"
 
 > `'Marker Topic'` is visualization_marker
 
@@ -70,11 +71,11 @@ Parameter files are listed in the following table:
 
 - Heuristic algorithm
 
-Since the gird given in the problem statement is uniform in term of node and edge costs, the path can be directly calculated by the grid distance. Once the start position and the target position are determined, the path is given by the euler distance in the x and y directions. The function for this method is `'HeuristicPlanning '` in planner.cpp. 
+Since the gird given in the problem statement is uniform in terms of node and edge costs, the path can be directly calculated by the grid distance. Once the start position and the target position are determined, the path is given by the euler distance in the x and y directions. The function for this method is `'HeuristicPlanning '` in planner.cpp. 
 
 - Algorithms for complicated scenarios
 
-If complicated scenarios are requested, such as obstacles, collisions, and varying edge costs, a list of potential methods are suggested:
+If complicated scenarios are requested, such as obstacles, collisions, and varying edge costs, a list of potential methods are suggested to replace `'HeuristicPlanning '`:
 
 > A* algorithm
 
@@ -84,9 +85,9 @@ If complicated scenarios are requested, such as obstacles, collisions, and varyi
 
 ## Sample results
 
-- Here are the sample results. The paths are shown in the first picture. The path of agent 0 is shown in the red line. The path of agent1 is shown in cyan line. 
+- Here are the sample results. The paths are shown in the first picture. The path of agent 0 is shown in the red line. The path of agent1 is shown in the cyan line. 
 
-- The terminals are shown in the picture. When a rossevice call is made to the "/update_goal" topic, the planner displays the path results and sends it back to the corresponding agent. The agent displays the path from the planner again and updates the graphics in rviz. 
+- The terminals are shown in the following picture. When a rossevice call is made to the "/update_goal" topic, the planner displays the path results and sends them back to the corresponding agent. The agent displays the path from the planner again and updates the graphics in rviz. 
 
 <img src="images/Terminals.png">
 
@@ -94,10 +95,8 @@ If complicated scenarios are requested, such as obstacles, collisions, and varyi
 
 - About simulating the movement of the agent:
 
-For the 4th point of "Create an agent node: (20 points) ". The agent is assumed to move uniformly with a period of 10s based on the first sentence. However, the next sentence says " You are not required to simulate the motion of the agent". I am not sure whether the movements should be simulated. If they are to be simulated, the starting time of the motion (whether the motion of an agent starts right after the path is revceived), the stop logic (whether the agent stops at the end of the path), and the collision physics are not stated clearly, so I am not sure how to proceed with this step.
+For the 4th point of "Create an agent node: (20 points) ". The agent is assumed to move uniformly with a period of 10s based on the first sentence. However, the next sentence says " You are not required to simulate the motion of the agent". I am not sure whether the movements should be simulated. If they are to be simulated, the starting time of the motion (whether the motion of an agent starts right after the path is revceived), the stop logic (whether the agent stops at the end of the path), and collision physics requirements are not stated clearly, so I am not sure how to proceed in this step.
 
-If the motion is required, I could add a moving effect (constant velocity of 0.1m/s) to each agent. 
-
-
+If the motion simulation is required, I could add moving and physics effects (constant velocity of 0.1m/s) to each agent. 
 
 
