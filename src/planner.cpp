@@ -22,6 +22,7 @@ The a ros service server is added to provide the path: topic: "/get_plan"
 // package libs
 #include <multi_agent_planner/agentpos.h>
 #include <multi_agent_planner/pathinfo.h>
+#include <AstarPlanner.h>
 
 enum TransitionDirection{
     TRANSITION_UP = 0,
@@ -242,6 +243,39 @@ int main(int argc, char **argv){
         (*SubAgentList[i]) = nh.subscribe<multi_agent_planner::agentpos>("/agent" + agentID + "/agent_feedback", 50, 
                                                                          std::bind(&GetAgentPosition, arg::_1, i, &AgentPosition));
     }
+
+    Eigen::MatrixXi map(10,10);
+    // load map
+    map.setZero();
+    for(int i = 2;i<10;i++){
+        map(1,i)=1;
+    }
+    astar::AStarPlanner planner0(map);
+    astar::path_list path;
+    astar::location start;
+    astar::location target;
+
+    start.x_ = 1;
+    start.y_ = 0;
+
+    target.x_ = 7;
+    target.y_ = 5;
+
+    if(planner0.GetPath(path, start, target, false))
+    {
+        planner0.DispOpenlist();
+        planner0.DispCloselist();
+        planner0.DispNeighbourCost();
+        std::cout<<"the path (end to start) is: \n";
+        for(auto& t: path){
+            std::cout<<"("<<t.x_<<", "<<t.y_<<"), \n";
+        }
+        planner0.DisplayMap();                
+    }else{
+        std::cout<<"path not found! \n";
+    }
+
+
 
     while(ros::ok()) {
         ros::spinOnce();

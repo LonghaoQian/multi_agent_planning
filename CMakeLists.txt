@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.0.2)
 project(multi_agent_planner)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
-add_compile_options(-std=c++11)
+add_compile_options(-std=c++14)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -138,10 +138,13 @@ include_directories(
 ## The recommended prefix ensures that target names across packages don't collide
 # add_executable(${PROJECT_NAME}_node src/multi_agent_planner_node.cpp)
 
+add_library(AstarPlanner src/lib/AstarPlanner.cpp)
+
 add_executable(planner src/planner.cpp)
 add_dependencies(planner multi_agent_planner_generate_messages_cpp)
 add_dependencies(planner multi_agent_planner_gencpp)
 target_link_libraries(planner ${catkin_LIBRARIES})
+target_link_libraries(planner AstarPlanner)
 
 add_executable(agent src/agent.cpp)
 add_dependencies(agent multi_agent_planner_generate_messages_cpp)
